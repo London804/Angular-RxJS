@@ -13,6 +13,8 @@ export class ProductCategoryService {
 
   constructor(private http: HttpClient) { }
 
+  productCategories$ = this.http.get<ProductCategory[]>(this.productCategoriesUrl);
+
   private handleError(err: any) {
     // in a real world app, we may send the server to some remote logging infrastructure
     // instead of just logging it to the console
