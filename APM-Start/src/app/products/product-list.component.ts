@@ -1,7 +1,8 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ProductService } from './product.service';
-import { EMPTY } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { EMPTY, Subject, combineLatest, BehaviorSubject } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { ProductCategoryService } from '../product-categories/product-category.service';
 
 @Component({
   templateUrl: './product-list.component.html',
@@ -11,23 +12,45 @@ import { catchError } from 'rxjs/operators';
 export class ProductListComponent {
   pageTitle = 'Product List';
   errorMessage = '';
-  categories;
 
-  products$ = this.productService.productsWithCategory$
-    .pipe(
+  private categorySelectedSubject = new BehaviorSubject<number>(0);
+  categorySelectedAction$ = this.categorySelectedSubject.asObservable() // this exposes the observable
+
+  products$ = combineLatest([ // Combine subject and observable
+    this.productService.productsWithCategory$,
+    this.categorySelectedAction$
+  ]).pipe(
+      map(([products, selectedCategoryId]) => // this is a variable for the productService and categorySelectedAction$
+        products.filter(product =>
+          selectedCategoryId ? product.categoryId === selectedCategoryId : true
+        )),
       catchError(err => {
-        this.errorMessage = err;
+        this.errorMessage = err
         return EMPTY;
       })
     );
 
-  constructor(private productService: ProductService) { }
+  categories$ = this.productCategoryService.productCategories$
+    .pipe(
+      catchError(err => {
+        console.log('EMPTY', EMPTY);
+        return EMPTY
+      })
+    );
+
+
+  constructor(
+    private productService: ProductService,
+    private productCategoryService: ProductCategoryService
+  ) { }
 
   onAdd(): void {
     console.log('Not yet implemented');
   }
 
   onSelected(categoryId: string): void {
-    console.log('Not yet implemented');
+    this.categorySelectedSubject.next(+categoryId); // emit value to the action stream when an action occurs
   }
+
+
 }
